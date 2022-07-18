@@ -1,19 +1,28 @@
-import { OrbitControls, useGLTF } from "@react-three/drei";
-import { Canvas, useFrame, Vector3 } from "@react-three/fiber";
-import { MutableRefObject, useRef, useState } from "react";
+import { Effects, OrbitControls, useGLTF } from "@react-three/drei";
+import { Canvas, MeshBasicMaterialProps, useFrame, Vector3 } from "@react-three/fiber";
+import { MutableRefObject, useEffect, useMemo, useRef, useState } from "react";
 import { BoxGeometry, Color, Material, Mesh, MeshBasicMaterial, MeshPhongMaterial, Object3D } from "three";
+import { UnrealBloomPass } from "three-stdlib";
 
 
 export default function ThreeDom() {
-    const onj = new Mesh(new BoxGeometry(1,1,1), new MeshPhongMaterial({color: 'red'}))
-    // onj.rotateX
-    const [heightValues, setHeightValue] = useState(new Array(100).fill(null).map(() => Math.floor(Math.random() * 3 * 100) / 100))
-    let maxHeightIndex = 0
-    heightValues.forEach((value, i) => { if (value > heightValues[maxHeightIndex]) { maxHeightIndex = i } })
+    // const [heightValues, setHeightValue] = useState(new Array(100).fill(null).map(() => Math.floor(Math.random() * 3 * 100) / 100))
+    // let maxHeightIndex = 0
+    // heightValues.forEach((value, i) => { if (value > heightValues[maxHeightIndex]) { maxHeightIndex = i } })
+    // const boxTable = new Array(10).fill(null).map((v, y) => {
+    //     return new Array(10).fill(null).map((v, x) => {
+    //         const height = heightValues[y * 10 + x]
+    //         return <Box key={x + '' + y} position={[1.5 * x - 5, 1.5 * y - 5, height / 2]} scale={[1, 1, height]} isHighest={height === heightValues[maxHeightIndex]} />
+    //     })
+    // })
+
+    const [floorsValues, setFloorsValue] = useState(new Array(100).fill(null).map(() => Math.floor(Math.random() * 30)))
+    let maxFloorIndex = 0
+    floorsValues.forEach((value, i) => { if (value > floorsValues[maxFloorIndex]) { maxFloorIndex = i } })
     const buildingTable = new Array(10).fill(null).map((v, y) => {
         return new Array(10).fill(null).map((v, x) => {
-            const height = heightValues[y * 10 + x]
-            return <Box key={x + '' + y} position={[1.5 * x - 5, 1.5 * y - 5, height / 2]} scale={[1, 1, height]} isHighest={height === heightValues[maxHeightIndex]} />
+            const height = floorsValues[y * 10 + x]
+            return <Model key={x + '' + y} position={[2 * x - 0, 2 * y - 0, 0]} floorCount={height} isHighest={height === floorsValues[maxFloorIndex]} />
         })
     })
 
@@ -21,67 +30,99 @@ export default function ThreeDom() {
         <Canvas style={{ height: '100vh', width: '100vw' }}>
             <OrbitControls makeDefault />
             <ambientLight intensity={1} />
+            <Effects disableGamma>
+                <UnrealBloomPass threshold={1} strength={1.0} radius={0.5} />
+            </Effects>
             <pointLight position={[10, 10, 10]} intensity={1} />
+            {/* {boxTable} */}
             {buildingTable}
-            <Model floorCount={22}/>
+            {/* <Model position={[1 - 0, 0 - 0, 0]} floorCount={12} />
+            <Model position={[2 - 0, 0 - 0, 0]} floorCount={12} /> */}
         </Canvas>
     )
 }
 
 const addFloors = (floors: Object3D, count: number) => {
-    const _appendFloor = (addFloorCount: number, parent: Object3D) => {
-        const newFloor = parent.getObjectByName('nadi_f12')!.clone() as Mesh<any>
-        newFloor.name = `nadi_f${12 + addFloorCount}`
-        newFloor.position.setY(newFloor.position.y + (283.956 * addFloorCount))
-        parent.add(newFloor)
-    }
-    const _offsetRoof = (addFloorCount: number, parent: Object3D) => {
-        const roof = floors.getObjectByName('NADI_Top')!
-        const top = floors.getObjectByName('nadi_f13')!
-        roof.position.setY(roof.position.y + (283.956 * (count - 1)))
-        top.position.setY(top.position.y + (283.956 * (count - 1)))
-    }
     for (let i = 0; i < count; i++) {
-        _appendFloor(i, floors)
+        const newFloor = floors.getObjectByName('nadi_f12')!.clone() as Mesh<any>
+        const roof = floors.getObjectByName('nadi_f13') as Mesh<any>
+        const top = floors.getObjectByName('NADI_Top') as Mesh<any>
+        newFloor.name = `nadi_f${12 + i}`
+        newFloor.position.setY(283.956 * (i))
+        roof.position.setY(283.956 * (0 + i))
+        top.position.setY(283.956 * (0 + i))
+        floors.add(newFloor)
     }
-    _offsetRoof(count, floors)
 }
- 
+
 const reduceFloors = (floors: Object3D, count: number) => {
 
-    const _removeExtraFloors = (floorNumber:number) => {
-        const floorToRemove = floors.getObjectByName(`nadi_f${floorNumber+1}`)
+    const _removeExtraFloors = (floorNumber: number) => {
+        const floorToRemove = floors.getObjectByName(`nadi_f${floorNumber + 1}`)
         floorToRemove?.removeFromParent()
     }
     const _queryRemainFloors = () => {
-        return floors.children.filter( floor => {
+        return floors.children.filter(floor => {
             const roof = floor.name.includes('NADI_Top')
             const normalFloor = floor.name.includes('nadi_f')
             return roof || normalFloor
         })
     }
-    const _offsetFloorsDownward = (floors: Object3D[]) => floors.forEach( f => f.position.setY(f.position.y-283.956))
+    const _offsetFloorsDownward = (floors: Object3D[]) => floors.forEach(f => f.position.setY(f.position.y - 283.956))
 
     for (let i = 0; i < count; i++) {
         _removeExtraFloors(i)
         const remainFloors = _queryRemainFloors()
-        _offsetFloorsDownward(remainFloors)   
+        _offsetFloorsDownward(remainFloors)
     }
 }
 
-function Model({floorCount}: {floorCount: number}) {
-    const gltf = useGLTF('./src/assets/NADI_headquarter.gltf')
+function Model(props: any) {
+    const gltf = useGLTF('./src/assets/NADI_headquarter.gltf');
+    const scene = useMemo(() => gltf.scene.clone(), [gltf]);
     const ref = useRef<THREE.Mesh>(null!)
-    const floors = gltf.scene.children[0]
-    if (12 - floorCount < 0) {
-        addFloors(floors, floorCount - 12)
-    }   else {
-        reduceFloors(floors, 12 - floorCount)
+    const material = new MeshPhongMaterial({
+        color: 'red',
+        // wireframe: true
+    })
+    const floors = scene.children[0]
+    const [floorsSet, markFloorsSet] = useState(false)
+
+    if (!floorsSet) {
+        if (12 - props.floorCount < 0) {
+            addFloors(floors, props.floorCount - 12)
+        } else {
+            reduceFloors(floors, 12 - props.floorCount)
+        }
+        markFloorsSet(true)
+        console.log('floorsSet');
     }
-    
-    return (<primitive object={gltf.scene}  scale={0.0005} rotation={[Math.PI*0.5,0,0]} ref={ref}/>)
-  }
-  
+
+    const [hovered, hover] = useState(false)
+    const [clicked, click] = useState(false)
+    let color: string | Color = 'orange'
+    if (hovered) {
+        color = 'hotpink'
+    } else if (props.isHighest) {
+        color = new Color(0.5, 0.5, 0.8)
+    }
+    scene.traverse((object: any) => {
+        if (object.material) {
+            object.material = material
+            object.material.color.set(color)
+        }
+    })
+    return (<primitive {...props}
+        onClick={() => click(!clicked)}
+        onPointerOver={() => hover(true)}
+        onPointerOut={() => hover(false)}
+        object={scene}
+        scale={0.0005}
+        rotation={[Math.PI * 0.5, 0, 0]}
+        ref={ref} />)
+
+}
+
 
 function Box(props: any) {
     const ref = useRef<THREE.Mesh>(null!)
@@ -91,7 +132,7 @@ function Box(props: any) {
     if (hovered) {
         color = 'hotpink'
     } else if (props.isHighest) {
-        color = new Color(0.5,0.5,0.8)
+        color = new Color(0.5, 0.5, 0.8)
     }
     // useFrame((state, delta) => (ref.current.rotation.x += 0.01))
     return (
@@ -101,7 +142,7 @@ function Box(props: any) {
             onClick={(event) => click(!clicked)}
             onPointerOver={(event) => hover(true)}
             onPointerOut={(event) => hover(false)}>
-            <boxGeometry args={[1, 1, 1]}/>
+            <boxGeometry args={[1, 1, 1]} />
             <meshStandardMaterial color={color} />
         </mesh>
     )
