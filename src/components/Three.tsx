@@ -1,9 +1,23 @@
 import { Effects, OrbitControls, useGLTF } from "@react-three/drei";
-import { Canvas, MeshBasicMaterialProps, useFrame, Vector3 } from "@react-three/fiber";
+import { Canvas, extend, MeshBasicMaterialProps, Object3DNode, useFrame, Vector3 } from "@react-three/fiber";
 import { MutableRefObject, useEffect, useMemo, useRef, useState } from "react";
-import { BoxGeometry, Color, Material, Mesh, MeshBasicMaterial, MeshPhongMaterial, Object3D } from "three";
+import { BoxGeometry, Color, GridHelper, Material, Mesh, MeshBasicMaterial, MeshPhongMaterial, Object3D } from "three";
 import { UnrealBloomPass } from "three-stdlib";
 
+// Create our custom element
+class CustomElement extends UnrealBloomPass {}
+
+// Extend so the reconciler will learn about it
+extend({ CustomElement })
+
+// Add types to JSX.Intrinsic elements so primitives pick up on it
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      customElement: Object3DNode<CustomElement, typeof CustomElement>
+    }
+  }
+}
 
 export default function ThreeDom() {
     // const [heightValues, setHeightValue] = useState(new Array(100).fill(null).map(() => Math.floor(Math.random() * 3 * 100) / 100))
@@ -29,9 +43,10 @@ export default function ThreeDom() {
     return (
         <Canvas style={{ height: '100vh', width: '100vw' }}>
             <OrbitControls makeDefault />
-            <ambientLight intensity={1} />
+            <ambientLight intensity={0.5} />
             <Effects disableGamma>
-                <UnrealBloomPass threshold={1} strength={1.0} radius={0.5} />
+                {/* <unrealBloomPass threshold={1} strength={1.0} radius={0.5} /> */}
+                <customElement  threshold={0.4} strength={0.3} radius={0.6}/>
             </Effects>
             <pointLight position={[10, 10, 10]} intensity={1} />
             {/* {boxTable} */}
