@@ -1,22 +1,24 @@
 import { Effects, OrbitControls, useGLTF } from "@react-three/drei";
 import { Canvas, extend, MeshBasicMaterialProps, Object3DNode, useFrame, Vector3 } from "@react-three/fiber";
 import { MutableRefObject, useEffect, useMemo, useRef, useState } from "react";
-import { BoxGeometry, Color, GridHelper, Material, Mesh, MeshBasicMaterial, MeshPhongMaterial, Object3D } from "three";
+import { BoxGeometry, Color, GridHelper, Material, Mesh, MeshBasicMaterial, MeshPhongMaterial, Object3D, PlaneGeometry } from "three";
 import { UnrealBloomPass } from "three-stdlib";
+import { useSpring, a } from '@react-spring/three'
+
 
 // Create our custom element
-class CustomElement extends UnrealBloomPass {}
+class CustomElement extends UnrealBloomPass { }
 
 // Extend so the reconciler will learn about it
 extend({ CustomElement })
 
 // Add types to JSX.Intrinsic elements so primitives pick up on it
 declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      customElement: Object3DNode<CustomElement, typeof CustomElement>
+    namespace JSX {
+        interface IntrinsicElements {
+            customElement: Object3DNode<CustomElement, typeof CustomElement>
+        }
     }
-  }
 }
 
 export default function ThreeDom() {
@@ -32,6 +34,8 @@ export default function ThreeDom() {
 
     const [floorsValues, setFloorsValue] = useState(new Array(100).fill(null).map(() => Math.floor(Math.random() * 30)))
     let maxFloorIndex = 0
+    const box = new Mesh(new BoxGeometry(10, 10, 10), new MeshPhongMaterial())
+    box.translateZ
     floorsValues.forEach((value, i) => { if (value > floorsValues[maxFloorIndex]) { maxFloorIndex = i } })
     const buildingTable = new Array(10).fill(null).map((v, y) => {
         return new Array(10).fill(null).map((v, x) => {
@@ -39,18 +43,27 @@ export default function ThreeDom() {
             return <Model key={x + '' + y} position={[2 * x - 0, 2 * y - 0, 0]} floorCount={height} isHighest={height === floorsValues[maxFloorIndex]} />
         })
     })
+    const [isCanvasClicked, setCanvasClicked] = useState(false)
+    const props = useSpring({
+        position: isCanvasClicked ? [10, 10, 0] : [0, 0, 0]
+    })
 
     return (
-        <Canvas style={{ height: '100vh', width: '100vw' }}>
+        <Canvas style={{ height: '100vh', width: '100vw' }} onClick={() => setCanvasClicked(!isCanvasClicked)}>
             <OrbitControls makeDefault />
             <ambientLight intensity={0.5} />
+            <fog attach="fog" args={['#B8860B', 5, 20]} />
             <Effects disableGamma>
                 {/* <unrealBloomPass threshold={1} strength={1.0} radius={0.5} /> */}
-                <customElement  threshold={0.4} strength={0.3} radius={0.6}/>
+                <customElement threshold={0.4} strength={0.3} radius={0.6} />
             </Effects>
             <pointLight position={[10, 10, 10]} intensity={1} />
             {/* {boxTable} */}
             {buildingTable}
+            <a.mesh scale={[1, 1, 1]} position={props.position} >
+                <planeGeometry args={[40, 40, 40]}></planeGeometry>
+                <meshPhongMaterial color={'#666644'}></meshPhongMaterial>
+            </a.mesh>
             {/* <Model position={[1 - 0, 0 - 0, 0]} floorCount={12} />
             <Model position={[2 - 0, 0 - 0, 0]} floorCount={12} /> */}
         </Canvas>
