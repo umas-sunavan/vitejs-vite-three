@@ -1,7 +1,7 @@
 import { Effects, OrbitControls, OrbitControlsProps, useGLTF } from "@react-three/drei";
 import { Canvas, extend, MeshBasicMaterialProps, Object3DNode, useFrame, useThree, Vector3 } from "@react-three/fiber";
 import { MutableRefObject, useEffect, useMemo, useRef, useState } from "react";
-import { BoxGeometry, BufferGeometry, Color, DoubleSide, GridHelper, Group, Material, Mesh, MeshBasicMaterial, MeshPhongMaterial, Object3D, PlaneGeometry, Vector3 as V3 } from "three";
+import { BoxGeometry, BufferGeometry, Color, DoubleSide, GridHelper, Group, Material, Mesh, MeshBasicMaterial, MeshPhongMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, Vector3 as V3 } from "three";
 import { UnrealBloomPass } from "three-stdlib";
 import { useSpring, a, SpringValue } from '@react-spring/three'
 
@@ -83,7 +83,8 @@ const CameraAnimation = (props: any) => {
     }
     
     const [buildingFloors, setFloorsValue] = useState(new Array(100).fill(null).map(() => Math.floor(Math.random() * 30)))
-    const [buildingClicked, setCanvasClicked] = useState(undefined) as [MutableRefObject<Group> | undefined, any]
+    const [buildingClicked, setCanvasHovered] = useState(undefined) as [MutableRefObject<Group> | undefined, any]
+    const [isAnyHovered, setisAnyHovered] = useState(false) as [boolean, any]
     const highestBuildingId = _getHighest()
     const buildingTable = new Array(10).fill(null).map((v, y) => {
         return new Array(10).fill(null).map((v, x) => {
@@ -95,8 +96,13 @@ const CameraAnimation = (props: any) => {
             floorCount={height} 
             isHighest={height === buildingFloors[highestBuildingId]} 
             onPointerOver={(ref:MutableRefObject<Group>)=> {
-                setCanvasClicked(ref)
-            }}/>
+                setCanvasHovered(ref)
+            }}
+            setHovered={(isHovered: boolean)=>{
+                setisAnyHovered(isHovered)
+            }}
+            isAnyHovered={isAnyHovered}
+            />
         })
     })
     const getPosition = (building:MutableRefObject<Group> | undefined) => {
@@ -215,7 +221,9 @@ function Model(props: any) {
     const gltf = useGLTF('./src/assets/NADI_headquarter.gltf');
     const scene = useMemo(() => gltf.scene.clone(), [gltf]);
     const ref = useRef<THREE.Mesh>(null!)
-    const material = new MeshPhongMaterial({
+    const material = new MeshStandardMaterial({
+        opacity: 1,
+        transparent: true,
         color: 'red',
         // wireframe: true
     })
@@ -230,12 +238,10 @@ function Model(props: any) {
         }
         markFloorsSet(true)
         console.log('floorsSet');
-    }
-    console.log(props);
-    
+    }    
     const [sliceMode, toggleSliceMode] = useState(false)
-
     if (sliceMode) {
+        console.log('sliceMode');
         removeSomeFloors(floors, props.floorCount)
     }   else {
         recoverFloors(floors, props.floorCount)
@@ -245,15 +251,22 @@ function Model(props: any) {
     const [hovered, hover] = useState(false)
     const [clicked, click] = useState(false)
     let color: string | Color = 'orange'
+    let opacity: number = 1
     if (hovered) {
-        color = new Color(0.5, 0.5, 0.8)
+        color = new Color(0.5, 0.5, 0.5)
     } else if (props.isHighest) {
         color = 'hotpink'
+    }    
+    if (props.isAnyHovered && !hovered) {
+        opacity = 1
+    }   else {
+        opacity = 1
     }
     scene.traverse((object: any) => {
         if (object.material) {
             object.material = material
-            object.material.color.set(color)
+            object.material.color.set(color);
+            (object.material as MeshPhongMaterial).opacity = opacity
         }
     })
     return (<primitive {...props}
@@ -261,11 +274,13 @@ function Model(props: any) {
         onPointerOver={() => {
             props.onPointerOver(ref)
             hover(true)
-            toggleSliceMode(true)}
-        }
+            toggleSliceMode(true)
+            props.setHovered(true)
+        }}
         onPointerOut={() => {
             hover(false)
             toggleSliceMode(false)
+            props.setHovered(false)
         }}
         object={scene}
         scale={0.0005}
