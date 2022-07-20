@@ -35,7 +35,7 @@ const CameraAnimation = (props: any) => {
         if (distance > 0.8) {
             if (started) {
               state.camera.lookAt(10,5,0);
-              state.camera.position.lerp(vec.set(position.x, state.camera.position.y, position.z + 10), .08)
+              state.camera.position.lerp(vec.set(15-position.x, state.camera.position.y, position.z + 10), .08)
             } 
 
         }
@@ -81,6 +81,7 @@ const CameraAnimation = (props: any) => {
         buildingFloors.forEach((value, i) => { if (value > buildingFloors[highestFloorId]) { highestFloorId = i } })
         return highestFloorId
     }
+    
     const [buildingFloors, setFloorsValue] = useState(new Array(100).fill(null).map(() => Math.floor(Math.random() * 30)))
     const [buildingClicked, setCanvasClicked] = useState(undefined) as [MutableRefObject<Group> | undefined, any]
     const highestBuildingId = _getHighest()
@@ -99,13 +100,16 @@ const CameraAnimation = (props: any) => {
         })
     })
     const getPosition = (building:MutableRefObject<Group> | undefined) => {
-        return building ? building.current.position.toArray() : [0,0,0]
+        return building ? [building.current.position.x, building.current.position.y, -0.1] : [0,0,-0.1]
+    }
+    const getReversePosition = (building:MutableRefObject<Group> | undefined) => {
+        return [0,0,-0.1]
     }
     const animationProps = useSpring({
         position: getPosition(buildingClicked)
     })
     const orbitRef = useRef<MutableRefObject<OrbitControlsProps>>();
-    const enableCameraLooking = false
+    const enableCameraLooking = true
     useEffect( () => {
         // if (!orbitRef.current) return 
         // console.log((orbitRef.current as any).target);
@@ -116,16 +120,18 @@ const CameraAnimation = (props: any) => {
     })
       return (
         <Canvas camera={{ fov: 45, position:  [10, -5, 5]}} style={{ height: '100vh', width: '100vw' }}>
-            {enableCameraLooking ? <CameraAnimation pos={buildingClicked?.current.position}/> : ''}
-            <OrbitControls ref={orbitRef} target={enableCameraLooking ? buildingClicked?.current.position.toArray() : [10,5,0]}/>
-            <ambientLight intensity={0.5} />
-            <fog attach="fog" args={['#B8860B', 5, 20]} />
+            {/* {enableCameraLooking ? <CameraAnimation pos={buildingClicked?.current.position}/> : ''} */}
+            <OrbitControls ref={orbitRef} target={[10,5,0]}/>
+            <ambientLight intensity={0.3} />
+            <spotLight intensity={0.3} position={[15,-5, 5]} color={'#ff0000'}/>
+            <spotLight intensity={0.3} position={[0,-10, 5]} color={'#ffff00'}/>
+            <fog attach="fog" args={['#B8860B', 15, 30]} />
             <Effects disableGamma>
-                <customElement threshold={0.4} strength={0.3} radius={0.6} />
+                <customElement threshold={0.6} strength={0.25} radius={0.6} />
             </Effects>
             <pointLight position={[10, 10, 10]} intensity={1} />
             {buildingTable}
-            <a.mesh scale={[1, 1, 1]} position={animationProps.position} >
+            <a.mesh scale={[10, 10, 10]} position={animationProps.position} >
                 <planeGeometry args={[40, 40, 40]}></planeGeometry>
                 <meshPhongMaterial side={DoubleSide} color={'#666644'}></meshPhongMaterial>
             </a.mesh>
@@ -175,6 +181,36 @@ const reduceFloors = (floors: Object3D, count: number) => {
     }
 }
 
+const removeSomeFloors = (floors: Object3D, floorCount: number) => {
+    const _removeExtraFloors = (floorNumber: number) => {
+        const floorToRemove = floors.getObjectByName(`nadi_f${floorNumber + 1}`)
+        floorToRemove?.scale.setScalar(0)
+    }
+    const _removeRoofAndTop = () => {
+        const top = floors.getObjectByName(`NADI_Top`)
+        const roof = floors.getObjectByName(`nadi_f13`)
+        top?.scale.setScalar(0)
+        roof?.scale.setScalar(0)
+    }
+    _removeExtraFloors(floorCount)
+    _removeRoofAndTop()
+}
+
+const recoverFloors = (floors: Object3D, floorCount: number) => {
+    const _removeExtraFloors = (floorNumber: number) => {
+        const floorToRemove = floors.getObjectByName(`nadi_f${floorNumber + 1}`)
+        floorToRemove?.scale.setScalar(1)
+    }
+    const _removeRoofAndTop = () => {
+        const top = floors.getObjectByName(`NADI_Top`)
+        const roof = floors.getObjectByName(`nadi_f13`)
+        top?.scale.setScalar(1)
+        roof?.scale.setScalar(1)
+    }
+    _removeExtraFloors(floorCount)
+    _removeRoofAndTop()
+}
+
 function Model(props: any) {
     const gltf = useGLTF('./src/assets/NADI_headquarter.gltf');
     const scene = useMemo(() => gltf.scene.clone(), [gltf]);
@@ -195,14 +231,24 @@ function Model(props: any) {
         markFloorsSet(true)
         console.log('floorsSet');
     }
+    console.log(props);
+    
+    const [sliceMode, toggleSliceMode] = useState(false)
+
+    if (sliceMode) {
+        removeSomeFloors(floors, props.floorCount)
+    }   else {
+        recoverFloors(floors, props.floorCount)
+    }
+    
 
     const [hovered, hover] = useState(false)
     const [clicked, click] = useState(false)
     let color: string | Color = 'orange'
     if (hovered) {
-        color = 'hotpink'
-    } else if (props.isHighest) {
         color = new Color(0.5, 0.5, 0.8)
+    } else if (props.isHighest) {
+        color = 'hotpink'
     }
     scene.traverse((object: any) => {
         if (object.material) {
@@ -214,9 +260,13 @@ function Model(props: any) {
         onClick={() => click(!clicked)}
         onPointerOver={() => {
             props.onPointerOver(ref)
-            hover(true)}
+            hover(true)
+            toggleSliceMode(true)}
         }
-        onPointerOut={() => hover(false)}
+        onPointerOut={() => {
+            hover(false)
+            toggleSliceMode(false)
+        }}
         object={scene}
         scale={0.0005}
         rotation={[Math.PI * 0.5, 0, 0]}
