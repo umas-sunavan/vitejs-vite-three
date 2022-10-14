@@ -1,3 +1,3 @@
 # vitejs-vite-cdx1sm
 
-[Edit on StackBlitz ⚡️](https://stackblitz.com/edit/vitejs-vite-cdx1sm)
+- This project displays yellow buildings with click event in react-three-fiber 
