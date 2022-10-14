@@ -128,8 +128,8 @@ const CameraAnimation = (props: any) => {
         <Canvas camera={{ fov: 45, position:  [10, -5, 5]}} style={{ height: '100vh', width: '100vw' }}>
             {/* {enableCameraLooking ? <CameraAnimation pos={buildingClicked?.current.position}/> : ''} */}
             <OrbitControls ref={orbitRef} target={[10,5,0]}/>
-            <ambientLight intensity={0.3} />
-            <spotLight intensity={0.3} position={[15,-5, 5]} color={'#ff0000'}/>
+            <ambientLight intensity={0.4} />
+            {/* <spotLight intensity={0.3} position={[15,-5, 5]} color={'#ff0000'}/> */}
             <spotLight intensity={0.3} position={[0,-10, 5]} color={'#ffff00'}/>
             <fog attach="fog" args={['#B8860B', 15, 30]} />
             <Effects disableGamma>
